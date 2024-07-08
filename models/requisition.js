@@ -1,6 +1,6 @@
 const mongoose = require ('mongoose')
 
-const requisitionSchema = new Requisition({
+const requisitionSchema = new mongoose.Requisition({
     products: [{
         product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
         quantity: { type: Number, required: true }

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-const adminSchema = new Admin ({
+const adminSchema = new mongoose.Schema({
     name:{type:String, required:true},
     mincomEmail :{type :String , required:true},
     password :{type :String , required:true},
