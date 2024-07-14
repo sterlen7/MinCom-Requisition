@@ -3,6 +3,7 @@ const app = express();
 require('dotenv').config()
 const mongoose =require('mongoose');
 const { userRouter } = require('./Routes/userRouter');
+const { adminRouter } = require('./Routes/adminRouter');
 
 mongoose.connect(process.env.MONGO_URI)
 .then(()=> console.log('Database connected'))
@@ -13,6 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 
 
 app.use('/api', userRouter)
+app.use('/api', adminRouter)
 
 const PORT = process.env.PORT
 
