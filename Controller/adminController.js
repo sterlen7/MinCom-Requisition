@@ -1,4 +1,5 @@
 const Admin = require("../models/admin");
+const product = require('../models/product')
 const bcrypt=require('bcrypt')
 const jwt = require('jsonwebtoken')
 
@@ -60,3 +61,25 @@ exports.adminLogin = async (req, res) => {
         res.status(500).json({ msg: "Server Error" });
     }
 };
+
+
+exports.addMerch=async(req,res)=>{
+    const {name,color,size,description}=req.body 
+    try {
+        const newMerch = new product({
+            name,
+            description,
+            size,
+            color
+        });
+
+        const createdMerch = await newMerch.save();
+        
+        res.status(201).json(createdMerch);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+
+}
