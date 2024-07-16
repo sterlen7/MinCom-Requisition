@@ -1,6 +1,6 @@
 const mongoose = require ('mongoose')
 
-const requisitionSchema = new mongoose.Requisition({
+const requisitionSchema = new mongoose.Schema({
     products: [{
         product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
         quantity: { type: Number, required: true }
@@ -10,4 +10,4 @@ const requisitionSchema = new mongoose.Requisition({
     createdAt: { type: Date, default: Date.now }
 });
 
-const Requisition = mongoose.model('Requisition', requisitionSchema);
+exports.requisition = mongoose.model('Requisition', requisitionSchema);
