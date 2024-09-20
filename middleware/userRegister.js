@@ -3,7 +3,11 @@ const Joi = require('joi');
 const userSchema = Joi.object({
     name: Joi.string().required(),
     department: Joi.string().required(),
-    email: Joi.string().email().regex(/@mincom\.gov\.gh$/).required(),
+    email: Joi.string().email().regex(/^[a-zA-Z0-9._%+-]+@mincom\.gov\.gh$/).required().messages({
+        'string.email': 'Please provide a valid email address',
+        'string.pattern.base': 'Email must be from the mincom.gov.gh domain',
+        'any.required': 'Email is required'
+    }),
     password: Joi.string().required(),
 });
 

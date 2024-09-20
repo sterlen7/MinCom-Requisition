@@ -2,15 +2,11 @@ const express = require('express');
 const app = express();
 require('dotenv').config()
 const mongoose =require('mongoose');
+const db_connection = require ('./')
 const { userRouter } = require('./Routes/userRouter');
 const { adminRouter } = require('./Routes/adminRouter');
 
-mongoose.connect(process.env.MONGO_URI)
-.then(()=> console.log('Database connected'))
-.catch((err)=>{console.log(err)})
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+db_connection()
 
 
 app.use('/api', userRouter)
