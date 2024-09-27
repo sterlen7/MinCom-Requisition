@@ -1,16 +1,16 @@
-const User = require ('../models/user')
+const User = require ('../models/userModel')
 const bcrypt =require('bcrypt')
 const jwt = require('jsonwebtoken')
-const product = require ('../models/product')
-const requisition = require ('../models/requisition')
+const Requisition = require ('../models/requisition')
 const expressAsyncHandler = require('express-async-handler')
+const Product = require('../models/productModel');
 
-
-exports.createUser = async (req, res) => {
-    const { name, department, email, password,  } = req.body;
+exports.createUser =expressAsyncHandler (async (req, res) => {
+    const { name, department, email, password,role } = req.body;
 
     try {
-        const hashedPassword = await bcrypt.hash(password, 10); 
+        const saltRounds = 10
+        const hashedPassword = await bcrypt.hash(password, saltRounds); 
         
     const usernameExists = await User.findOne({name})
     const emailExists = await User.findOne({email})
@@ -28,6 +28,7 @@ exports.createUser = async (req, res) => {
             department,
             email,
             password: hashedPassword,
+            role
         });
 
         await newUser.save();
@@ -37,65 +38,93 @@ exports.createUser = async (req, res) => {
         console.error('Error creating user', error);
         res.status(500).json({ msg: 'Server error' });
     }
+});
+
+exports.userLogin = async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+    
+        if (!password) {
+            return res.status(400).json({ message: 'Password is required' });
+        }
+
+        
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User does not exist. Please sign up." });
+        }
+      
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: "Invalid credentials" });
+        }
+
+       
+        const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_ACCESS_SECRET_KEY, { expiresIn: '6000s' });
+        const refreshToken = jwt.sign({ userId: user._id }, process.env.JWT_REFRESH_SECRET_KEY, { expiresIn: '1d' });
+
+        
+        return res.status(200).json({
+            message: "Login successful",
+            accessToken,
+            refreshToken
+        });
+
+    } catch (error) {
+        console.error("Login Error:", error);
+        return res.status(500).json({ message: "Internal server error", error: error.message });
+    }
 };
 
+// exports.userLogout = expressAsyncHandler(async(req,res)=>{
+//     try{
+//         const token = req.headers.authorization?.split(' ')[1]
 
-exports.userLogin = async (req,res) => {
-    const {email,password}=req.body 
+//         if(!token){
+//             return res.status(401).json({msg:"Access token required"})
+//         }
 
-    try{
+//         const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET_KEY)
+//         const userId = decoded.id
 
-            if (!email) {
-                return res.status(400).json({ message: 'Email or username is required' });
-            }
-    
-            if(!password){
-                return res.status(400).json({msg:'Password is required'})
-            }
-            const user = await User.findOne({ email });
-         
-           
-            if (!user) {
-                return res.json({ message: "User does not exist. Sign up!" });
-            }
-            
-            const isPassword = await bcrypt.compare( password , user.password);
-    
-                if (!isPassword) {
-                    return res.status(401).json({ msg: "Invalid credential" }); 
-                } 
-            const accessToken = jwt.sign({ userId: user.id }, process.env.JWT_SEC, { expiresIn: '6000s' });
+//         const loggedUser= await  User.findById(userId)
+//         if (!loggedUser){
+//             return res.status(404).json({ msg: "User not found" })
+//         }
+
+//     }catch(error){
+//         res.status(500).json({msg:"Internal server error"})
+//         console.log(error)
+//     }
+// })
 
 
-            res.status(200).json({ msg: "Login success",accessToken});
-    
-    }catch(error){
-        console.error(error)
-        res.status(500).json({msg:"Internal server error"},error)
+exports.addMerch=async(req,res)=>{
+    const {name,color,size,description}=req.body 
+    try {
+        const newMerch = new product({
+            name,
+            description,
+            size,
+            color
+        });
+
+        const createdMerch = await newMerch.save();
+        
+        res.status(201).json(createdMerch);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
     }
-} 
 
-exports.userLogout = expressAsyncHandler(async(req,res)=>{
-    try{
-        const token = req.headers.authorization?.split(' ')[1]
+}
 
-        if(!token){
-            return res.status(401).json({msg:"Access token required"})
-        }
-
-        const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET_KEY)
-        const userId = decoded.id
-
-        const loggedUser= await  User.findById(userId)
-        if (!loggedUser){
-            return res.status(404).json({ msg: "User not found" })
-        }
-
-    }catch(error){
-        res.status(500).json({msg:"Internal server error"})
-        console.log(error)
-    }
-})
 
 exports.getInventory = async (req,res) => {
     try{
@@ -129,37 +158,62 @@ exports.searchMerch = async (req, res) => {
 }
 
 exports.createRequisition = async (req, res) => {
-    const requestedBy = req.user.id;
-    const { products } = req.body;
-
-    if (!Array.isArray(products) || products.length === 0) {
-        return res.status(400).json({ msg: "Products array is required and should not be empty" });
-    }
-
     try {
+        // The authenticated user is now available as req.auth
+        const requestedBy = req.auth._id;
+        console.log('Authenticated User ID:', requestedBy);
+
+        if (!requestedBy) {
+            return res.status(401).json({ msg: "Invalid token, user ID not found" });
+        }
+
+        const { products } = req.body;
+
+        if (!Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({ msg: "Products array is required and should not be empty" });
+        }
+
         const productPromises = products.map(async ({ name, quantity }) => {
-            const foundProduct = await product.findOne({ name });
+            const foundProduct = await Product.findOne({ name: { $regex: new RegExp('^' + name + '$', 'i') } });
             if (!foundProduct) {
                 throw new Error(`Product with name ${name} not found`);
             }
-            return { product: foundProduct.name, quantity };
+            return { product: foundProduct._id, quantity };
         });
 
         const resolvedProducts = await Promise.all(productPromises);
 
-        const request = new requisition({
+        const request = new Requisition({
             products: resolvedProducts,
             requestedBy,
+            status: 'pending',
             createdAt: Date.now()
         });
 
         await request.save();
 
-        return res.status(200).json({ msg: "Requisition created successfully", request });
+        await request.populate('products.product', 'name');
+        await request.populate('requestedBy', 'name email');
+
+        return res.status(201).json({ msg: "Requisition created successfully", requisition: request });
     } catch (error) {
-        console.error(error);
+        console.error('General Error:', error);
         res.status(500).json({ msg: "Error creating requisition", error: error.message });
     }
 };
 
 
+exports.getAllRequisitions = async (req, res) => {
+    try {
+        
+        const requisitions = await Requisition.find()
+            .populate('products.product', 'name color size description')
+            .populate('requestedBy', 'name email'); 
+
+        
+        return res.status(200).json({ msg: "Requisitions retrieved successfully", requisitions });
+    } catch (error) {
+        console.error('Error retrieving requisitions:', error);
+        res.status(500).json({ msg: "Error retrieving requisitions", error: error.message });
+    }
+};

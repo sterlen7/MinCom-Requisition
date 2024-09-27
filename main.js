@@ -1,33 +1,40 @@
 const express = require('express');
 const app = express();
-require('dotenv').config()
-const mongoose =require('mongoose');
-const fs = require("fs")
-const path = require("path")
-const db_connection = require ('./config/db')
-const { userRouter } = require('./Routes/userRouter');
-const { adminRouter } = require('./Routes/adminRouter');
+require('dotenv').config();
+const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
+const db_connection = require('./config/db');
 
-db_connection()
 
-// app.use('/api', userRouter)
-// app.use('/api', adminRouter)
+db_connection();
 
-const PORT = process.env.PORT
+const PORT = process.env.PORT || 3000;
 
-app.get('/', (req, res, next) => {
-    res.send('<h1>Hello world<h1>');
-})
+app.use(express.json());  
+app.use(express.urlencoded({ extended: true })); 
 
-try {	
-	fs.readdirSync(path.join(__dirname, "routes")).map((file) => {
-		const userRouter = require(`./Routes/userRouter`)
-		app.use("/api",userRouter)
-	})
+
+app.get('/', (req, res) => {
+    res.send('<h1>Hello world</h1>');
+});
+
+try {
+    const routesPath = path.join(__dirname, 'Routes');
+    
+    fs.readdirSync(routesPath).forEach((file) => {
+        const route = require(path.join(routesPath, file));
+        if (typeof route === 'function') {
+            app.use('/api', route);
+        } else {
+            console.error(`Error: ${file} does not export a valid Express router function`);
+        }
+    });
 } catch (error) {
-	console.error("Error loading routes:", error);
+    console.error('Error loading routes:', error);
 }
 
+
 app.listen(PORT, () => {
-    console.info(`Server listen on port ${PORT}`);
-})
+    console.info(`Server listening on port ${PORT}`);
+});

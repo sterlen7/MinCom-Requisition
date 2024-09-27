@@ -1,15 +1,61 @@
 const mongoose = require('mongoose');
+const validator = require('validator');
 
 const requisitionSchema = new mongoose.Schema({
     products: [{
-        product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-        quantity: { type: Number, required: true }
+        product: { 
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: 'Product', 
+            required: [true, 'Product is required'] 
+        },
+        quantity: { 
+            type: Number, 
+            required: [true, 'Quantity is required'],
+            min: [1, 'Quantity must be at least 1'], 
+            validate: {
+                validator: Number.isInteger,
+                message: 'Quantity must be an integer'
+            }
+        }
     }],
-    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
-    requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    createdAt: { type: Date, default: Date.now }
+    status: { 
+        type: String, 
+        enum: ['pending', 'approved', 'rejected'], 
+        default: 'pending',
+        required: [true, 'Status is required']
+    },
+    requestedBy: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User', 
+        required: [true, 'Requestor is required'] 
+    },
+    createdAt: { 
+        type: Date, 
+        default: Date.now 
+    },
+    
+    approvedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    approvedAt: {
+        type: Date
+    },
+    rejectedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    rejectedAt: {
+        type: Date
+    },
+    rejectionReason: {
+        type: String
+    }
 });
 
 const Requisition = mongoose.model('Requisition', requisitionSchema);
 
 module.exports = Requisition;
+
+
+
