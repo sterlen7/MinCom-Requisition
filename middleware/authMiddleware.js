@@ -47,13 +47,21 @@ const requireSignIn = asyncHandler(async (req, res, next) => {
     }
 });
 
-// 
 const isAdmin = asyncHandler(async (req, res, next) => {
-    if (req.user && req.user.role && req.user.role.includes('admin')) {
+   
+    if (!req.auth) {
+        console.log("Authentication missing");
+        return res.status(401).json({ message: "Authentication required" });
+    }
+    // Check if role is an array and includes 'admin'
+    if (Array.isArray(req.auth.role) && req.auth.role.includes('admin')) {
+        console.log("Admin access granted");
+        next();
+    } else if (req.auth.role === 'admin') {
+        
         next();
     } else {
-        res.status(401);
-        throw new Error('Not authorized as an admin');
+        return res.status(403).json({ message: "Access denied. Admin privileges required." });
     }
 });
 

@@ -203,17 +203,93 @@ exports.createRequisition = async (req, res) => {
 };
 
 
-exports.getAllRequisitions = async (req, res) => {
-    try {
-        
+exports.getAllRequisitions = expressAsyncHandler(async (req, res) => {
+    try{
         const requisitions = await Requisition.find()
-            .populate('products.product', 'name color size description')
-            .populate('requestedBy', 'name email'); 
+        res.status(200).json({msg:"Requisitions retrieved successfully",requisitions})
+
+    }catch(error){
+        console.log(error)
+        res.status(500).json({msg:"Internal server error"})
+    }
+});
+
+exports.approveRequisition = expressAsyncHandler(async (req, res) => {
+    const requisitionId = req.params.id; 
+
+    try {
+       
+        const requisition = await Requisition.findById(requisitionId);
 
         
-        return res.status(200).json({ msg: "Requisitions retrieved successfully", requisitions });
+        if (!requisition) {
+            return res.status(404).json({ msg: "Requisition not found" });
+        }
+
+       
+        if (requisition.status === 'approved') {
+            return res.status(400).json({ msg: "Requisition already approved" });
+        }
+
+       
+        requisition.status = 'approved';
+        requisition.approvedBy = req.auth._id; 
+
+        await requisition.save(); 
+
+        return res.status(200).json({ msg: "Requisition approved successfully", requisition });
     } catch (error) {
-        console.error('Error retrieving requisitions:', error);
-        res.status(500).json({ msg: "Error retrieving requisitions", error: error.message });
+        console.error("Error approving requisition:", error);
+        return res.status(500).json({ msg: "Error approving requisition", error: error.message });
     }
-};
+})
+
+exports.rejectRequisition = expressAsyncHandler(async (req, res) => {
+    const requisitionId = req.params.id;
+
+    try {
+       
+        const requisition = await Requisition.findById(requisitionId);
+
+        
+        if (!requisition) {
+            return res.status(404).json({ msg: "Requisition not found" });
+        }
+
+        
+        if (requisition.status !== 'pending') {
+            return res.status(400).json({ msg: `Cannot reject requisition. Status is already ${requisition.status}` });
+        }
+
+      
+        requisition.status = 'rejected';
+        requisition.rejectedBy = req.auth._id
+        await requisition.save();
+
+  
+        return res.status(200).json({ msg: "Requisition rejected successfully", requisition });
+    } catch (error) {
+        console.error('Error rejecting requisition:', error);
+        return res.status(500).json({ msg: "Error rejecting requisition", error: error.message });
+    }
+})
+
+
+exports.getPendingRequisitions = expressAsyncHandler(async (req, res) => {
+    try {
+        
+        const pendingRequisitions = await Requisition.find({ status: 'pending' })
+            .populate('products.product', 'name color size description')
+            .populate('requestedBy', 'name email')
+
+        if (pendingRequisitions.length === 0) {
+            return res.status(404).json({ msg: "No pending requisitions found" })
+        }
+
+        
+        return res.status(200).json({ msg: "Pending requisitions retrieved successfully", requisitions: pendingRequisitions });
+    } catch (error) {
+        console.error('Error fetching pending requisitions:', error);
+        return res.status(500).json({ msg: "Error retrieving pending requisitions", error: error.message })
+    }
+})
