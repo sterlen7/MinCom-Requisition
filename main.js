@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const db_connection = require('./config/db');
+const setTokenCleanUp = require('./utils/cleanToken')
+
 
 
 db_connection();
@@ -33,6 +35,9 @@ try {
 } catch (error) {
     console.error('Error loading routes:', error);
 }
+
+setTokenCleanUp()
+
 
 
 app.listen(PORT, () => {

@@ -1,6 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
+const tokenBlacklist = require("../models/tokenBlacklistModel");
 
 const access_token = process.env.JWT_ACCESS_SECRET_KEY;
 
@@ -14,6 +15,14 @@ const requireSignIn = asyncHandler(async (req, res, next) => {
         }
 
         const token = authHeader.split(" ")[1];
+
+		
+		const blacklistedToken = await tokenBlacklist.findOne({ token })
+		if (blacklistedToken) {
+			console.log("Token is blacklisted");
+			return res.status(403).json({ message: "Invalid token. Login to continue..." })
+		}
+		
 
        
         jwt.verify(token, access_token, async (err, decoded) => {

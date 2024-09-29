@@ -3,7 +3,8 @@ const bcrypt =require('bcrypt')
 const jwt = require('jsonwebtoken')
 const Requisition = require ('../models/requisition')
 const expressAsyncHandler = require('express-async-handler')
-const Product = require('../models/productModel');
+const Product = require('../models/productModel')
+const tokenBlacklist = require('../models/tokenBlacklistModel')
 
 exports.createUser =expressAsyncHandler (async (req, res) => {
     const { name, department, email, password,role } = req.body;
@@ -68,6 +69,9 @@ exports.userLogin = async (req, res) => {
         const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_ACCESS_SECRET_KEY, { expiresIn: '6000s' });
         const refreshToken = jwt.sign({ userId: user._id }, process.env.JWT_REFRESH_SECRET_KEY, { expiresIn: '1d' });
 
+        user.accessToken.push(accessToken)
+        user.refreshToken.push(refreshToken)
+        await user.save()
         
         return res.status(200).json({
             message: "Login successful",
@@ -81,33 +85,67 @@ exports.userLogin = async (req, res) => {
     }
 };
 
-// exports.userLogout = expressAsyncHandler(async(req,res)=>{
-//     try{
-//         const token = req.headers.authorization?.split(' ')[1]
+exports.userLogout = expressAsyncHandler(async (req, res) => {
+    try {
+     
+        const token = req.headers.authorization?.split(' ')[1];
 
-//         if(!token){
-//             return res.status(401).json({msg:"Access token required"})
-//         }
+        if (!token) {
+            return res.status(401).json({ msg: "Access token required" });
+        }
 
-//         const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET_KEY)
-//         const userId = decoded.id
+       
+        const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET_KEY);
 
-//         const loggedUser= await  User.findById(userId)
-//         if (!loggedUser){
-//             return res.status(404).json({ msg: "User not found" })
-//         }
+     
+        const userId = decoded.userId
 
-//     }catch(error){
-//         res.status(500).json({msg:"Internal server error"})
-//         console.log(error)
-//     }
-// })
+     
+        const loggedUser = await User.findById(userId);
+        if (!loggedUser) {
+            return res.status(404).json({ msg: "User not found" });
+        }
+
+       
+        loggedUser.accessToken = loggedUser.accessToken.filter(at => at !== token);
+
+      
+        if (req.body.refreshToken) {
+            loggedUser.refreshToken = loggedUser.refreshToken.filter(rt => rt !== req.body.refreshToken);
+        } else {
+            loggedUser.refreshToken = [];
+        }
+
+       
+        await loggedUser.save();
+
+      
+        const decodedToken = jwt.verify(token, process.env.JWT_ACCESS_SECRET_KEY);
+        const expiresAt = new Date(decodedToken.exp * 1000); 
+
+       
+        const blacklistedToken = new tokenBlacklist({
+            token,
+            expiresAt
+        });
+
+        
+        await blacklistedToken.save();
+
+       
+        res.status(200).json({ msg: "Log out successful" });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: "Error logging out", error });
+    }
+});
 
 
 exports.addMerch=async(req,res)=>{
     const {name,color,size,description}=req.body 
     try {
-        const newMerch = new product({
+        const newMerch = new Product({
             name,
             description,
             size,
@@ -128,7 +166,7 @@ exports.addMerch=async(req,res)=>{
 
 exports.getInventory = async (req,res) => {
     try{
-        const inventory = await product.find()
+        const inventory = await Product.find()
         res.status(200).json(inventory)
 
     }catch(error){
@@ -144,7 +182,7 @@ exports.searchMerch = async (req, res) => {
             return res.status(400).json({ msg: "Please provide the name of the merchandise" });
         }
 
-        const merch = await product.find({ name: { $regex: new RegExp(name, 'i') } });
+        const merch = await Product.find({ name: { $regex: new RegExp(name, 'i') } });
 
         if (merch.length === 0) {
             return res.status(404).json({ message: 'No product found with the specified name' });
@@ -159,7 +197,7 @@ exports.searchMerch = async (req, res) => {
 
 exports.createRequisition = async (req, res) => {
     try {
-        // The authenticated user is now available as req.auth
+     
         const requestedBy = req.auth._id;
         console.log('Authenticated User ID:', requestedBy);
 
@@ -272,24 +310,29 @@ exports.rejectRequisition = expressAsyncHandler(async (req, res) => {
         console.error('Error rejecting requisition:', error);
         return res.status(500).json({ msg: "Error rejecting requisition", error: error.message });
     }
-})
+});
 
 
 exports.getPendingRequisitions = expressAsyncHandler(async (req, res) => {
     try {
-        
+        console.log('Fetching pending requisitions...');
+
         const pendingRequisitions = await Requisition.find({ status: 'pending' })
             .populate('products.product', 'name color size description')
-            .populate('requestedBy', 'name email')
+            .populate('requestedBy', 'name email');
+
+        console.log('Requisitions fetched:', pendingRequisitions);
 
         if (pendingRequisitions.length === 0) {
-            return res.status(404).json({ msg: "No pending requisitions found" })
+            console.log('No pending requisitions found');
+            return res.status(200).json({ msg: "No pending requisitions found", requisitions: [] });
         }
 
-        
+        console.log('Returning pending requisitions...');
         return res.status(200).json({ msg: "Pending requisitions retrieved successfully", requisitions: pendingRequisitions });
+
     } catch (error) {
         console.error('Error fetching pending requisitions:', error);
-        return res.status(500).json({ msg: "Error retrieving pending requisitions", error: error.message })
+        return res.status(500).json({ msg: "Error retrieving pending requisitions", error: error.message });
     }
-})
+});
