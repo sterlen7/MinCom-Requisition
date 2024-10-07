@@ -20,7 +20,8 @@ userRouter.post('/create-requisition',requireSignIn,createRequisition)
 userRouter.get('/requisitions', requireSignIn, isAdmin, getAllRequisitions)
 userRouter.put('/requisitions/:id/approve', requireSignIn, isAdmin, approveRequisition)
 userRouter.put('/requisitions/:id/reject', requireSignIn, isAdmin, rejectRequisition)
-userRouter.get('/pending-requisitions', isAdmin, getPendingRequisitions)
+userRouter.get('/pending-requisitions', requireSignIn, isAdmin, getPendingRequisitions)
+
 
 
 
