@@ -245,7 +245,7 @@ exports.getAllRequisitions = async (req, res) => {
         console.log('Fetching all requisitions...');
 
         const requisitions = await Requisition.find({})
-            .populate('products.product', 'name')  // Populate product names
+            .populate('products.product', 'name')
             .populate('requestedBy', 'name email');
 
         if (requisitions.length === 0) {
@@ -256,10 +256,10 @@ exports.getAllRequisitions = async (req, res) => {
         const formattedRequisitions = requisitions.map(req => ({
             _id: req._id,
             products: req.products.map(p => ({
-                name: p.product.name,
+                name: p.product?.name ,
                 quantity: p.quantity
             })),
-            requestedBy: req.requestedBy.name,
+            requestedBy: req.requestedBy?.name ,
             status: req.status,
             createdAt: req.createdAt
         }));
