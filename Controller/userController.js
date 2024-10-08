@@ -195,61 +195,31 @@ exports.searchMerch = async (req, res) => {
     }
 }
 
-exports.createRequisition = async (req, res) => {
-    try {
-     
-        const requestedBy = req.auth._id;
-        console.log('Authenticated User ID:', requestedBy);
-
-        if (!requestedBy) {
-            return res.status(401).json({ msg: "Invalid token, user ID not found" });
-        }
-
-        const { products } = req.body;
-
-        if (!Array.isArray(products) || products.length === 0) {
-            return res.status(400).json({ msg: "Products array is required and should not be empty" });
-        }
-
-        const productPromises = products.map(async ({ name, quantity }) => {
-            const foundProduct = await Product.findOne({ name: { $regex: new RegExp('^' + name + '$', 'i') } });
-            if (!foundProduct) {
-                throw new Error(`Product with name ${name} not found`);
-            }
-            return { product: foundProduct._id, quantity };
-        });
-
-        const resolvedProducts = await Promise.all(productPromises);
-
-        const request = new Requisition({
-            products: resolvedProducts,
-            requestedBy,
-            status: 'pending',
-            createdAt: Date.now()
-        });
-
-        await request.save();
-
-        await request.populate('products.product', 'name');
-        await request.populate('requestedBy', 'name email');
-
-        return res.status(201).json({ msg: "Requisition created successfully", requisition: request });
-    } catch (error) {
-        console.error('General Error:', error);
-        res.status(500).json({ msg: "Error creating requisition", error: error.message });
-    }
-};
-
-
 exports.getAllRequisitions = expressAsyncHandler(async (req, res) => {
-    try{
-        const requisitions = await Requisition.find()
-        res.status(200).json({msg:"Requisitions retrieved successfully",requisitions})
+    console.log('Fetching all requisitions...');
 
-    }catch(error){
-        console.log(error)
-        res.status(500).json({msg:"Internal server error"})
+    const requisitions = await Requisition.find({})
+        .populate('products.product', 'name')  
+        .populate('requestedBy', 'name email');
+
+    if (requisitions.length === 0) {
+        console.log('No requisitions found');
+        return res.status(200).json({ msg: "No requisitions found", requisitions: [] });
     }
+
+    const formattedRequisitions = requisitions.map(req => ({
+        _id: req._id,
+        products: req.products.map(p => ({
+            name: p.product.name,
+            quantity: p.quantity
+        })),
+        requestedBy: req.requestedBy.name,
+        status: req.status,
+        createdAt: req.createdAt
+    }));
+
+    console.log('Returning all requisitions...');
+    return res.status(200).json({ msg: "All requisitions retrieved successfully", requisitions: formattedRequisitions });
 });
 
 exports.approveRequisition = expressAsyncHandler(async (req, res) => {
