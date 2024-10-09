@@ -142,8 +142,15 @@ exports.userLogout = expressAsyncHandler(async (req, res) => {
 });
 
 
-exports.addMerch=async(req,res)=>{
-    const {name,color,size,description}=req.body 
+exports.addMerch = expressAsyncHandler(async (req, res) => {
+    console.log('addMerch controller reached');
+    console.log('Authenticated user:', req.auth); // Log the authenticated user
+
+    const { name, color, size, description } = req.body;
+    
+    // Log the received data
+    console.log('Received merchandise data:', { name, color, size, description });
+
     try {
         const newMerch = new Product({
             name,
@@ -154,15 +161,13 @@ exports.addMerch=async(req,res)=>{
 
         const createdMerch = await newMerch.save();
         
-        res.status(201).json(createdMerch);
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
+        console.log('Merchandise created successfully:', createdMerch);
+        res.status(201).json({ message: 'Merchandise created successfully', merchandise: createdMerch });
+    } catch (error) {
+        console.error('Error creating merchandise:', error);
+        res.status(500).json({ message: "Error creating merchandise", error: error.message });
     }
-
-}
-
+});
 
 exports.getInventory = async (req,res) => {
     try{

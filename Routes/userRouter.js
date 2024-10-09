@@ -11,9 +11,10 @@ userRouter.post('/user/register',createUser)
 userRouter.post('/user/login',userLogin)
 userRouter.post('/user/logout',requireSignIn,userLogout)
 
-userRouter.post('/add-merch', isAdmin,addMerch)
+
 userRouter.get ('/all-inventory',getInventory)
 userRouter.get('/search-inventory',requireSignIn,searchMerch)
+userRouter.post('/add-merch', requireSignIn,isAdmin,addMerch)
 
 
 userRouter.post('/create-requisition',requireSignIn,createRequisition)
