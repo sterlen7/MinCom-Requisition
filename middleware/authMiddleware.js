@@ -36,7 +36,7 @@ const requireSignIn = asyncHandler(async (req, res, next) => {
         const userId = decoded.userId;
         console.log("Decoded user ID:", userId);
 
-        const user = await User.findById(userId);
+        const user = await User.findById(userId).select('name email department role')
         if (!user) {
             console.log("User not found for ID:", userId);
             return res.status(401).json({ message: "User not found" });

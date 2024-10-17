@@ -45,6 +45,10 @@ const requisitionSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
+    requestedByDepartment: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'department',
+    },
     rejectedAt: {
         type: Date
     },

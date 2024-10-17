@@ -247,121 +247,169 @@ exports.createRequisition = async (req, res) => {
         res.status(500).json({ msg: "Error creating requisition", error: error.message });
     }
 }
-
 exports.getAllRequisitions = async (req, res) => {
     try {
-        console.log('Fetching all requisitions...');
+        console.log('Fetching requisitions...');
+        console.log('Authenticated user:', req.auth);
+        console.log('User role:', req.auth.role);
 
-        const requisitions = await Requisition.find({})
+        // Check if the user is an admin
+        if (!req.auth || !req.auth.role.includes('admin')) {
+            console.log('Access denied. User role:', req.auth?.role);
+            return res.status(403).json({ msg: "Access denied. Admin role required." });
+        }
+
+        const adminDepartment = req.auth.department;
+        console.log('Admin Department:', adminDepartment);
+
+        if (!adminDepartment) {
+            console.log('Admin department not found');
+            return res.status(400).json({ msg: "Admin department not specified" });
+        }
+
+        
+        const usersInDepartment = await User.find({ department: adminDepartment }).select('_id');
+        const userIds = usersInDepartment.map(user => user._id);
+
+       
+        const requisitions = await Requisition.find({ requestedBy: { $in: userIds } })
             .populate('products.product', 'name')
-            .populate('requestedBy', 'name email');
+            .populate('requestedBy', 'name email department');
+
+        console.log('Requisitions found:', requisitions.length);
 
         if (requisitions.length === 0) {
-            console.log('No requisitions found');
-            return res.status(200).json({ msg: "No requisitions found", requisitions: [] });
+            console.log('No requisitions found for this department');
+            return res.status(200).json({ msg: "No requisitions found for your department", requisitions: [] });
         }
 
         const formattedRequisitions = requisitions.map(req => ({
             _id: req._id,
             products: req.products.map(p => ({
-                name: p.product?.name ,
+                name: p.product?.name,
                 quantity: p.quantity
             })),
-            requestedBy: req.requestedBy?.name ,
+            requestedBy: req.requestedBy?.name,
+            requestedByDepartment: req.requestedBy?.department,
             status: req.status,
             createdAt: req.createdAt
         }));
 
-        console.log('Returning all requisitions...');
-        return res.status(200).json({ msg: "All requisitions retrieved successfully", requisitions: formattedRequisitions });
+        console.log('Returning department requisitions...');
+        return res.status(200).json({ 
+            msg: "Requisitions retrieved successfully", 
+            userRole: req.auth.role,
+            userDepartment: adminDepartment,
+            requisitions: formattedRequisitions 
+        });
 
     } catch (error) {
         console.error('Error fetching requisitions:', error);
         return res.status(500).json({ msg: "Error retrieving requisitions", error: error.message });
     }
-}
+};
+
 
 exports.approveRequisition = expressAsyncHandler(async (req, res) => {
-    const requisitionId = req.params.id; 
+    const requisitionId = req.params.id;
 
     try {
-       
-        const requisition = await Requisition.findById(requisitionId);
+        // the requisition and populate the requestedBy field
+        const requisition = await Requisition.findById(requisitionId).populate('requestedBy', 'department');
 
-        
         if (!requisition) {
             return res.status(404).json({ msg: "Requisition not found" });
         }
 
-       
+        
+        if (req.auth.department !== requisition.requestedBy.department) {
+            return res.status(403).json({ msg: "You can only approve requisitions from your department" });
+        }
+
         if (requisition.status === 'approved') {
             return res.status(400).json({ msg: "Requisition already approved" });
         }
 
-       
         requisition.status = 'approved';
-        requisition.approvedBy = req.auth._id; 
+        requisition.approvedBy = req.auth._id;
 
-        await requisition.save(); 
+        await requisition.save();
 
         return res.status(200).json({ msg: "Requisition approved successfully", requisition });
     } catch (error) {
         console.error("Error approving requisition:", error);
         return res.status(500).json({ msg: "Error approving requisition", error: error.message });
     }
-})
+});
 
 exports.rejectRequisition = expressAsyncHandler(async (req, res) => {
     const requisitionId = req.params.id;
 
     try {
-       
-        const requisition = await Requisition.findById(requisitionId);
-
         
+        const requisition = await Requisition.findById(requisitionId).populate('requestedBy', 'department');
+
         if (!requisition) {
             return res.status(404).json({ msg: "Requisition not found" });
         }
 
-        
+       
+        if (req.auth.department !== requisition.requestedBy.department) {
+            return res.status(403).json({ msg: "You can only reject requisitions from your department" });
+        }
+
         if (requisition.status !== 'pending') {
             return res.status(400).json({ msg: `Cannot reject requisition. Status is already ${requisition.status}` });
         }
 
-      
         requisition.status = 'rejected';
-        requisition.rejectedBy = req.auth._id
+        requisition.rejectedBy = req.auth._id;
         await requisition.save();
 
-  
         return res.status(200).json({ msg: "Requisition rejected successfully", requisition });
     } catch (error) {
         console.error('Error rejecting requisition:', error);
         return res.status(500).json({ msg: "Error rejecting requisition", error: error.message });
     }
-})
-
+});
 
 exports.getPendingRequisitions = expressAsyncHandler(async (req, res) => {
     try {
         console.log('Fetching pending requisitions...');
+        console.log('Admin department:', req.auth.department);
 
-        const pendingRequisitions = await Requisition.find({ status: 'pending' })
-            .populate('products.product', 'name color size description')
-            .populate('requestedBy', 'name email');
+       
+        if (!req.auth.role.includes('admin')) {
+            return res.status(403).json({ msg: "Access denied. Admin role required." });
+        }
 
-        console.log('Requisitions fetched:', pendingRequisitions);
+        
+        const usersInDepartment = await User.find({ department: req.auth.department }).select('_id');
+        const userIds = usersInDepartment.map(user => user._id);
+
+        const pendingRequisitions = await Requisition.find({ 
+            status: 'pending',
+            requestedBy: { $in: userIds }
+        })
+        .populate('products.product', 'name color size description')
+        .populate('requestedBy', 'name email department');
+
+        console.log('Pending requisitions fetched:', pendingRequisitions.length);
 
         if (pendingRequisitions.length === 0) {
-            console.log('No pending requisitions found');
-            return res.status(200).json({ msg: "No pending requisitions found", requisitions: [] });
+            console.log('No pending requisitions found for this department');
+            return res.status(200).json({ msg: "No pending requisitions found for your department", requisitions: [] });
         }
 
         console.log('Returning pending requisitions...');
-        return res.status(200).json({ msg: "Pending requisitions retrieved successfully", requisitions: pendingRequisitions });
+        return res.status(200).json({ 
+            msg: "Pending requisitions retrieved successfully", 
+            adminDepartment: req.auth.department,
+            requisitions: pendingRequisitions 
+        });
 
     } catch (error) {
         console.error('Error fetching pending requisitions:', error);
         return res.status(500).json({ msg: "Error retrieving pending requisitions", error: error.message });
     }
-})
+});
