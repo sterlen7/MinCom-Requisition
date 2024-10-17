@@ -14,7 +14,6 @@ const corsOptions = {
 }
 
 
-
 db_connection();
 
 const PORT = process.env.PORT || 5000;

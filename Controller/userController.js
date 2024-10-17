@@ -39,7 +39,7 @@ exports.createUser =expressAsyncHandler (async (req, res) => {
         console.error('Error creating user', error);
         res.status(500).json({ msg: 'Server error' });
     }
-});
+})
 
 exports.userLogin = async (req, res) => {
     const { email, password } = req.body;
@@ -57,13 +57,17 @@ exports.userLogin = async (req, res) => {
         
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(404).json({ message: "User does not exist. Please sign up." });
+            return res.status(404).json({ message: "User does not exist. Please sign up." })
         }
       
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const isPasswordValid = await bcrypt.compare(password, user.password)
         if (!isPasswordValid) {
-            return res.status(401).json({ message: "Invalid credentials" });
+            return res.status(401).json({ message: "Invalid credentials" })
         }
+        if(!isPasswordValid){
+            console.log("Invalid credentials")
+        }
+        
 
        
         const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_ACCESS_SECRET_KEY, { expiresIn: '6000s' });
@@ -83,7 +87,7 @@ exports.userLogin = async (req, res) => {
         console.error("Login Error:", error);
         return res.status(500).json({ message: "Internal server error", error: error.message });
     }
-};
+}
 
 exports.userLogout = expressAsyncHandler(async (req, res) => {
     try {
@@ -139,16 +143,15 @@ exports.userLogout = expressAsyncHandler(async (req, res) => {
         console.error(error);
         res.status(500).json({ msg: "Error logging out", error });
     }
-});
+})
 
 
 exports.addMerch = expressAsyncHandler(async (req, res) => {
     console.log('addMerch controller reached');
-    console.log('Authenticated user:', req.auth); // Log the authenticated user
+    console.log('Authenticated user:', req.auth); 
 
     const { name, color, size, description } = req.body;
     
-    // Log the received data
     console.log('Received merchandise data:', { name, color, size, description });
 
     try {
@@ -167,7 +170,7 @@ exports.addMerch = expressAsyncHandler(async (req, res) => {
         console.error('Error creating merchandise:', error);
         res.status(500).json({ message: "Error creating merchandise", error: error.message });
     }
-});
+})
 
 exports.getInventory = async (req,res) => {
     try{
@@ -243,7 +246,7 @@ exports.createRequisition = async (req, res) => {
         console.error('General Error:', error);
         res.status(500).json({ msg: "Error creating requisition", error: error.message });
     }
-};
+}
 
 exports.getAllRequisitions = async (req, res) => {
     try {
@@ -276,7 +279,7 @@ exports.getAllRequisitions = async (req, res) => {
         console.error('Error fetching requisitions:', error);
         return res.status(500).json({ msg: "Error retrieving requisitions", error: error.message });
     }
-};
+}
 
 exports.approveRequisition = expressAsyncHandler(async (req, res) => {
     const requisitionId = req.params.id; 
@@ -336,7 +339,7 @@ exports.rejectRequisition = expressAsyncHandler(async (req, res) => {
         console.error('Error rejecting requisition:', error);
         return res.status(500).json({ msg: "Error rejecting requisition", error: error.message });
     }
-});
+})
 
 
 exports.getPendingRequisitions = expressAsyncHandler(async (req, res) => {
@@ -361,4 +364,4 @@ exports.getPendingRequisitions = expressAsyncHandler(async (req, res) => {
         console.error('Error fetching pending requisitions:', error);
         return res.status(500).json({ msg: "Error retrieving pending requisitions", error: error.message });
     }
-});
+})

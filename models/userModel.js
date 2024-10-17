@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
         trim: true,
         lowercase: true,
         validate: {
-            validator: (value) => validator.isEmail(value),  // Use validator to check email format
+            validator: (value) => validator.isEmail(value),  
             message: 'Please enter a valid email address'
         }
     },
@@ -43,7 +43,7 @@ const userSchema = new mongoose.Schema({
     role: {
         type: [String],
         default: ["employee"],
-        enum: ["employee", "admin", ],
+        enum: ["employee", "admin","superAdmin"],
       },
     isActive: {
         type: Boolean,
@@ -59,7 +59,7 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Method to exclude password when converting to JSON
+
 userSchema.methods.toJSON = function () {
     const user = this.toObject();
     delete user.password; 

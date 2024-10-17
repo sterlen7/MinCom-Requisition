@@ -10,6 +10,7 @@ const userRouter = express.Router();
 userRouter.post('/user/register',createUser)
 userRouter.post('/user/login',userLogin)
 userRouter.post('/user/logout',requireSignIn,userLogout)
+ 
 
 
 userRouter.get ('/all-inventory',getInventory)
