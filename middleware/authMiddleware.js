@@ -68,6 +68,19 @@ const isAdmin = asyncHandler(async (req, res, next) => {
 });
 
 
+const isSuperAdmin = asyncHandler(async (req, res, next) => {
+    if (!req.auth) {
+        return res.status(401).json({ message: "Authentication required" });
+    }
+    console.log("User role in isSuperAdmin:", req.auth.role);
+    if (req.auth.role === 'superAdmin' || (Array.isArray(req.auth.role) && req.auth.role.includes('superAdmin'))) {
+        next();
+    } else {
+        return res.status(403).json({ message: "Access denied. Super Admin role required." });
+    }
+})
 
-module.exports = { requireSignIn, isAdmin };
+
+
+module.exports = { requireSignIn, isAdmin ,isSuperAdmin };
 

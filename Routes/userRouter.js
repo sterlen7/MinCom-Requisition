@@ -1,6 +1,6 @@
 const express = require('express');
-const { createUser, userLogin, userLogout,getInventory, searchMerch, createRequisition, addMerch ,getAllRequisitions, approveRequisition, rejectRequisition, getPendingRequisitions} = require('../Controller/userController');
-const { isAdmin,requireSignIn } = require('../middleware/authMiddleware');
+const { createUser, userLogin, userLogout,getInventory, searchMerch, createRequisition, addMerch ,getAllRequisitions, approveRequisition, rejectRequisition, getPendingRequisitions, getApprovedRequisitions} = require('../Controller/userController');
+const { isAdmin,requireSignIn, isSuperAdmin } = require('../middleware/authMiddleware');
 
 
 
@@ -25,8 +25,8 @@ userRouter.put('/requisitions/:id/reject', requireSignIn, isAdmin, rejectRequisi
 userRouter.get('/pending-requisitions', requireSignIn, isAdmin, getPendingRequisitions)
 
 
-
+//super admin routes
+userRouter.get('/approved-requisitions', requireSignIn, isSuperAdmin,getApprovedRequisitions)
 
 
 module.exports = userRouter
-

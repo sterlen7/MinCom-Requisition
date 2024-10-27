@@ -64,12 +64,7 @@ exports.userLogin = async (req, res) => {
         if (!isPasswordValid) {
             return res.status(401).json({ message: "Invalid credentials" })
         }
-        if(!isPasswordValid){
-            console.log("Invalid credentials")
-        }
-        
 
-       
         const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_ACCESS_SECRET_KEY, { expiresIn: '6000s' });
         const refreshToken = jwt.sign({ userId: user._id }, process.env.JWT_REFRESH_SECRET_KEY, { expiresIn: '1d' });
 
@@ -80,7 +75,8 @@ exports.userLogin = async (req, res) => {
         return res.status(200).json({
             message: "Login successful",
             accessToken,
-            refreshToken
+            refreshToken,
+            role: user.role 
         });
 
     } catch (error) {
@@ -307,7 +303,7 @@ exports.getAllRequisitions = async (req, res) => {
         console.error('Error fetching requisitions:', error);
         return res.status(500).json({ msg: "Error retrieving requisitions", error: error.message });
     }
-};
+}
 
 
 exports.approveRequisition = expressAsyncHandler(async (req, res) => {
@@ -340,7 +336,7 @@ exports.approveRequisition = expressAsyncHandler(async (req, res) => {
         console.error("Error approving requisition:", error);
         return res.status(500).json({ msg: "Error approving requisition", error: error.message });
     }
-});
+})
 
 exports.rejectRequisition = expressAsyncHandler(async (req, res) => {
     const requisitionId = req.params.id;
@@ -370,6 +366,67 @@ exports.rejectRequisition = expressAsyncHandler(async (req, res) => {
     } catch (error) {
         console.error('Error rejecting requisition:', error);
         return res.status(500).json({ msg: "Error rejecting requisition", error: error.message });
+    }
+})
+
+exports.grantRequisition = expressAsyncHandler(async (req, res) => {
+    const requisitionId = req.params.id;
+    const { grantedProducts } = req.body;
+
+    try {
+        
+        if (!req.auth.role.includes('superAdmin')) {
+            return res.status(403).json({ msg: "Access denied. Super Admin role required." });
+        }
+
+        
+        const requisition = await Requisition.findById(requisitionId)
+            .populate('products.product', 'name')
+            .populate('requestedBy', 'name email department');
+
+        if (!requisition) {
+            return res.status(404).json({ msg: "Requisition not found" });
+        }
+
+        
+        if (requisition.status !== 'approved') {
+            return res.status(400).json({ msg: "Only approved requisitions can be granted" });
+        }
+
+        
+        requisition.products = requisition.products.map(item => {
+            const grantedItem = grantedProducts.find(gp => gp.productId.toString() === item.product._id.toString());
+            return {
+                ...item.toObject(),
+                grantedQuantity: grantedItem ? grantedItem.grantedQuantity : 0
+            };
+        });
+
+        requisition.status = 'granted';
+        requisition.grantedBy = req.auth._id;
+        requisition.grantedAt = Date.now();
+
+        await requisition.save();
+
+        return res.status(200).json({
+            msg: "Requisition granted successfully",
+            requisition: {
+                _id: requisition._id,
+                products: requisition.products.map(p => ({
+                    name: p.product.name,
+                    requestedQuantity: p.quantity,
+                    grantedQuantity: p.grantedQuantity
+                })),
+                requestedBy: requisition.requestedBy.name,
+                department: requisition.requestedBy.department,
+                status: requisition.status,
+                grantedAt: requisition.grantedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Error granting requisition:', error);
+        return res.status(500).json({ msg: "Error granting requisition", error: error.message });
     }
 });
 
@@ -412,4 +469,41 @@ exports.getPendingRequisitions = expressAsyncHandler(async (req, res) => {
         console.error('Error fetching pending requisitions:', error);
         return res.status(500).json({ msg: "Error retrieving pending requisitions", error: error.message });
     }
-});
+})
+
+exports.getApprovedRequisitions = expressAsyncHandler(async (req, res) => {
+    try {
+        console.log('Fetching approved requisitions...');
+        console.log('User role:', req.auth.role);
+
+        
+        if (!req.auth.role.includes('superAdmin')) {
+            return res.status(403).json({ msg: "Access denied. Super Admin role required." });
+        }
+
+        const approvedRequisitions = await Requisition.find({ status: 'approved' })
+            .populate('products.product', 'name color size description')
+            .populate('requestedBy', 'name email department')
+            .populate('approvedBy', 'name')
+            
+
+        console.log('Approved requisitions fetched:', approvedRequisitions.length);
+
+        if (approvedRequisitions.length === 0) {
+            console.log('No granted requisitions found');
+            return res.status(200).json({ msg: "No approved requisitions found", requisitions: [] });
+        }
+
+        console.log('Returning approved requisitions...');
+        return res.status(200).json({ 
+            msg: "Approved requisitions retrieved successfully", 
+            requisitions: approvedRequisitions 
+        });
+
+    } catch (error) {
+        console.error('Error fetching approved requisitions:', error);
+        return res.status(500).json({ msg: "Error retrieving approved requisitions", error: error.message });
+    }
+})
+
+

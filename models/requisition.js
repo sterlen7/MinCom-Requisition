@@ -20,7 +20,7 @@ const requisitionSchema = new mongoose.Schema({
     }],
     status: { 
         type: String, 
-        enum: ['pending', 'approved', 'rejected'], 
+        enum: ['pending', 'approved', 'rejected','granted'], 
         default: 'pending',
         required: [true, 'Status is required']
     },
