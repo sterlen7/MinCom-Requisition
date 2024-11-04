@@ -105,7 +105,8 @@ exports.userLogin = async (req, res) => {
             accessToken,
             refreshToken,
             role: user.role,
-            isVerified:user.isVerified
+            isVerified:user.isVerified,
+            department:user.department
         });
 
 
