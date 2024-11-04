@@ -1,10 +1,13 @@
 const User = require ('../models/userModel')
 const bcrypt =require('bcrypt')
+const crypto = require('crypto')
 const jwt = require('jsonwebtoken')
 const Requisition = require ('../models/requisition')
 const expressAsyncHandler = require('express-async-handler')
 const Product = require('../models/productModel')
 const tokenBlacklist = require('../models/tokenBlacklistModel')
+
+
 
 exports.createUser =expressAsyncHandler (async (req, res) => {
     const { name, department, email, password,role } = req.body;
@@ -29,15 +32,40 @@ exports.createUser =expressAsyncHandler (async (req, res) => {
             department,
             email,
             password: hashedPassword,
-            role
+            role,
+            isVerified: false
         });
 
         await newUser.save();
 
-        res.status(201).json({ msg: 'User created successfully', newUser });
+        res.status(201).json({ msg: 'User created successfully. Please verify your email to complete registration.', newUser})
     } catch (error) {
         console.error('Error creating user', error);
         res.status(500).json({ msg: 'Server error' });
+    }
+})
+
+exports.verifyAccount = expressAsyncHandler(async(req,res) => {
+    const{otpCode}= req.body
+    try{
+        if (!otpCode) {
+            return res.status(400).json({ msg: "Provide an OTP code" });
+          }
+      
+          const existingUser = await User.findOne({ otpCode })
+          if (existingUser.otpCodeExpires < Date.now()) {
+            return res.status(400).json({ message: 'OTP code has expired' });
+          }
+
+          existingUser.isVerified = true
+          existingUser.otpCode = undefined
+          existingUser.otpCodeExpires = undefined
+          
+          await existingUser.save()
+          res.status(200).json({msg:"Account verified successfully"})
+
+    }catch(error){
+        res.status(500).json({msg:"Internal Server Error", error})
     }
 })
 
@@ -76,8 +104,10 @@ exports.userLogin = async (req, res) => {
             message: "Login successful",
             accessToken,
             refreshToken,
-            role: user.role 
+            role: user.role,
+            isVerified:user.isVerified
         });
+
 
     } catch (error) {
         console.error("Login Error:", error);

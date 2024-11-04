@@ -1,7 +1,7 @@
 const express = require('express');
-const { createUser, userLogin, userLogout,getInventory, searchMerch, createRequisition, addMerch ,getAllRequisitions, approveRequisition, rejectRequisition, getPendingRequisitions, getApprovedRequisitions} = require('../Controller/userController');
+const { createUser, userLogin, userLogout,getInventory, searchMerch, createRequisition, addMerch ,getAllRequisitions, approveRequisition, rejectRequisition, getPendingRequisitions, getApprovedRequisitions, verifyAccount} = require('../Controller/userController');
 const { isAdmin,requireSignIn, isSuperAdmin } = require('../middleware/authMiddleware');
-
+const { sendOtp } = require('../utils/verificationCode');
 
 
 const userRouter = express.Router();
@@ -10,7 +10,9 @@ const userRouter = express.Router();
 userRouter.post('/user/register',createUser)
 userRouter.post('/user/login',userLogin)
 userRouter.post('/user/logout',requireSignIn,userLogout)
- 
+
+userRouter.post('/user/send-otp',sendOtp)
+userRouter.post('/user/verify-otp',verifyAccount)
 
 
 userRouter.get ('/all-inventory',getInventory)
