@@ -8,7 +8,6 @@ const Product = require('../models/productModel')
 const tokenBlacklist = require('../models/tokenBlacklistModel')
 
 
-
 exports.createUser =expressAsyncHandler (async (req, res) => {
     const { name, department, email, password,role } = req.body;
 
@@ -173,11 +172,37 @@ exports.userLogout = expressAsyncHandler(async (req, res) => {
 })
 
 
+exports.forgotPassword = expressAsyncHandler(async (req, res) => {
+    const { newPassword,otpCode } = req.body;
+    try{
+        if (!otpCode) {
+            return res.status(400).json({ msg: "Provide an OTP code" });
+          }
+          const existingUser = await User.findOne({ otpCode })
+          if (existingUser.otpCodeExpires < Date.now()) {
+            return res.status(400).json({ message: 'OTP code has expired' });
+          }
+          const hashedPassword = await bcrypt.hash(newPassword,10)
+
+        existingUser.password = hashedPassword
+        existingUser.otpCode = undefined
+        existingUser.otpCodeExpires = undefined
+    
+        await existingUser.save()
+    
+        return res.status(200).json({ message: 'Password reset successful' })
+    
+
+    }catch(error){
+        res.status(500).json({msg:"Internal server error", error})
+    }
+})
+
 exports.addMerch = expressAsyncHandler(async (req, res) => {
     console.log('addMerch controller reached');
     console.log('Authenticated user:', req.auth); 
 
-    const { name, color, size, description } = req.body;
+    const { name, color, size, description,unitPrice,currency } = req.body;
     
     console.log('Received merchandise data:', { name, color, size, description });
 
@@ -186,7 +211,9 @@ exports.addMerch = expressAsyncHandler(async (req, res) => {
             name,
             description,
             size,
-            color
+            color,
+            unitPrice,
+            currency
         });
 
         const createdMerch = await newMerch.save();
@@ -246,12 +273,12 @@ exports.createRequisition = async (req, res) => {
             return res.status(400).json({ msg: "Products array is required and should not be empty" });
         }
 
-        const productPromises = products.map(async ({ name, quantity }) => {
+        const productPromises = products.map(async ({ name, quantityRequested }) => {
             const foundProduct = await Product.findOne({ name: { $regex: new RegExp('^' + name + '$', 'i') } });
             if (!foundProduct) {
                 throw new Error(`Product with name ${name} not found`);
             }
-            return { product: foundProduct._id, quantity };
+            return { product: foundProduct._id, quantityRequested };
         });
 
         const resolvedProducts = await Promise.all(productPromises);
@@ -536,5 +563,6 @@ exports.getApprovedRequisitions = expressAsyncHandler(async (req, res) => {
         return res.status(500).json({ msg: "Error retrieving approved requisitions", error: error.message });
     }
 })
+
 
 

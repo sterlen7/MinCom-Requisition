@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const validator = require('validator'); // Import validator
+const validator = require('validator'); 
 
 const productSchema = new mongoose.Schema({
     name: {
@@ -13,7 +13,7 @@ const productSchema = new mongoose.Schema({
         required: [true, 'Color is required'],
         trim: true,
         validate: {
-            validator: (value) => validator.isAlpha(value, 'en-US', { ignore: ' ' }),  // Ensures only alphabetic characters
+            validator: (value) => validator.isAlpha(value, 'en-US', { ignore: ' ' }),  
             message: 'Color must only contain alphabetic characters'
         }
     },
@@ -30,7 +30,18 @@ const productSchema = new mongoose.Schema({
         required: [true, 'Product description is required'],
         trim: true,
         minlength: [10, 'Description must be at least 10 characters long'],
-        maxlength: [500, 'Description cannot exceed 500 characters']
+        maxLength: [500, 'Description cannot exceed 500 characters']
+    },
+    unitPrice: {
+        type: Number,
+        required: [true, 'Unit price is required'],
+        min: [0, 'Unit price must be a positive number'] 
+    },
+    currency: {
+        type: String,
+        default: 'GHS', 
+        enum: ['GHS'], 
+        required: [true, 'Currency is required']
     }
 });
 

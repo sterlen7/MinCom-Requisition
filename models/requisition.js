@@ -8,7 +8,7 @@ const requisitionSchema = new mongoose.Schema({
             ref: 'Product', 
             required: [true, 'Product is required'] 
         },
-        quantity: { 
+        quantityRequested: { 
             type: Number, 
             required: [true, 'Quantity is required'],
             min: [1, 'Quantity must be at least 1'], 

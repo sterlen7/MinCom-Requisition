@@ -1,32 +1,23 @@
-const nodemailer = require('nodemailer')
-const expressAsyncHandler = require('express-async-handler');
-const User = require('../models/userModel')
-
+const nodemailer = require('nodemailer');
+const User = require('../models/userModel');
 
 function generateCode() {
     return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-exports.sendOtp = expressAsyncHandler(async (req, res) => {
-    const userId = req.params.userId;
-
-    if (!userId) {
-        return res.status(400).json({ message: 'Bad Request: No userId provided' });
-    }
+exports.forgotPasswordOtp = async (req, res) => {
+    const { email } = req.body
 
     try {
-        
-
-        const user = await User.findById(userId);
+        const user = await User.findOne({ email });
         
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const email = user.email;
         const otpCode = generateCode();
         user.otpCode = otpCode;
-        user.otpCodeExpires = Date.now() + 300000; 
+        user.otpCodeExpires = Date.now() + 300000; // Expires in 5 minutes
         await user.save();
 
         let transporter = nodemailer.createTransport({
@@ -41,9 +32,9 @@ exports.sendOtp = expressAsyncHandler(async (req, res) => {
 
         let mailOptions = {
             from: `"No Reply" <${process.env.USER_MAIL_ID}>`,
-            to: email,
+            to: email, 
             subject: 'Minerals Commission Requisition Platform OTP Code',
-            text: `Your OTP code is ${otpCode}. It will expire in 5 minutes. PLEASE DO NOT SHARE THIS WITH ANYBODY. Thank you`
+            html: `Your OTP code to reset your password is <strong style="color: red;">${otpCode}</strong>. It will expire in <strong = "color:red">5 minutes</strong>. Please do not share this code.`
         };
 
         await transporter.sendMail(mailOptions);
@@ -54,7 +45,4 @@ exports.sendOtp = expressAsyncHandler(async (req, res) => {
         console.error(error);
         res.status(500).json({ msg: "Internal server error", error });
     }
-});
-
-
-  
+};
