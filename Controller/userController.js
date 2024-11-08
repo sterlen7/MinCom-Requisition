@@ -259,7 +259,6 @@ exports.searchMerch = async (req, res) => {
 
 exports.createRequisition = async (req, res) => {
     try {
-     
         const requestedBy = req.auth._id;
         console.log('Authenticated User ID:', requestedBy);
 
@@ -269,8 +268,11 @@ exports.createRequisition = async (req, res) => {
 
         const { products } = req.body;
 
-        if (!Array.isArray(products) || products.length === 0) {
-            return res.status(400).json({ msg: "Products array is required and should not be empty" });
+        
+        for (const product of products) {
+            if (!product.quantityRequested) {
+                return res.status(400).json({ msg: "Quantity is required for each product" });
+            }
         }
 
         const productPromises = products.map(async ({ name, quantityRequested }) => {
@@ -362,7 +364,28 @@ exports.getAllRequisitions = async (req, res) => {
         return res.status(500).json({ msg: "Error retrieving requisitions", error: error.message });
     }
 }
+exports.getMyRequisitions = expressAsyncHandler(async (req, res) => {
+    try {
+        const userId = req.auth._id; // Get the authenticated user's ID
 
+        // Fetch requisitions made by the authenticated user
+        const myRequisitions = await Requisition.find({ requestedBy: userId })
+            .populate('products.product', 'name') 
+            .select('status createdAt'); 
+
+        if (myRequisitions.length === 0) {
+            return res.status(200).json({ msg: "No requisitions found for your account", requisitions: [] });
+        }
+
+        return res.status(200).json({
+            msg: "Requisitions retrieved successfully",
+            requisitions: myRequisitions
+        });
+    } catch (error) {
+        console.error('Error fetching my requisitions:', error);
+        return res.status(500).json({ msg: "Error retrieving requisitions", error: error.message });
+    }
+})
 
 exports.approveRequisition = expressAsyncHandler(async (req, res) => {
     const requisitionId = req.params.id;
