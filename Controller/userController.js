@@ -366,12 +366,12 @@ exports.getAllRequisitions = async (req, res) => {
 }
 exports.getMyRequisitions = expressAsyncHandler(async (req, res) => {
     try {
-        const userId = req.auth._id; // Get the authenticated user's ID
+        const userId = req.auth._id; 
 
         // Fetch requisitions made by the authenticated user
         const myRequisitions = await Requisition.find({ requestedBy: userId })
             .populate('products.product', 'name') 
-            .select('status createdAt'); 
+            .select('status createdAt products.quantityRequested');
 
         if (myRequisitions.length === 0) {
             return res.status(200).json({ msg: "No requisitions found for your account", requisitions: [] });
