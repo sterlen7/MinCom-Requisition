@@ -1,5 +1,5 @@
 const express = require('express');
-const { createUser, userLogin, userLogout,getInventory, searchMerch, createRequisition, addMerch ,getAllRequisitions, approveRequisition, rejectRequisition, getPendingRequisitions, getApprovedRequisitions, verifyAccount,forgotPassword} = require('../Controller/userController');
+const { createUser, userLogin, userLogout,getInventory, searchMerch, createRequisition, addMerch ,getAllRequisitions, approveRequisition, rejectRequisition, getPendingRequisitions, getApprovedRequisitions, verifyAccount,forgotPassword, getMyRequisitions} = require('../Controller/userController');
 const { isAdmin,requireSignIn, isSuperAdmin } = require('../middleware/authMiddleware');
 const { sendOtp } = require('../utils/verificationCode');
 const { forgotPasswordOtp } = require('../utils/forgotPasswordOtp');
@@ -29,6 +29,7 @@ userRouter.get('/requisitions', requireSignIn, isAdmin, getAllRequisitions)
 userRouter.put('/requisitions/:id/approve', requireSignIn, isAdmin, approveRequisition)
 userRouter.put('/requisitions/:id/reject', requireSignIn, isAdmin, rejectRequisition)
 userRouter.get('/pending-requisitions', requireSignIn, isAdmin, getPendingRequisitions)
+userRouter.get('/my-Requisitions',requireSignIn,getMyRequisitions)
 
 
 //super admin routes

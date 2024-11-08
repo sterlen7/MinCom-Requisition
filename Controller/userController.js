@@ -269,11 +269,11 @@ exports.createRequisition = async (req, res) => {
         const { products } = req.body;
 
         
-        for (const product of products) {
-            if (!product.quantityRequested) {
-                return res.status(400).json({ msg: "Quantity is required for each product" });
-            }
-        }
+        // for (const product of products) {
+        //     if (!product.quantityRequested) {
+        //         return res.status(400).json({ msg: "Quantity is required for each product" });
+        //     }
+        // }
 
         const productPromises = products.map(async ({ name, quantityRequested }) => {
             const foundProduct = await Product.findOne({ name: { $regex: new RegExp('^' + name + '$', 'i') } });
