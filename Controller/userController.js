@@ -86,7 +86,11 @@ exports.userLogin = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: "User does not exist. Please sign up." })
         }
-      
+
+        if (!user.isVerified) {
+            return res.status(403).json({ message: "Account not verified. Please verify your email." });
+        }
+
         const isPasswordValid = await bcrypt.compare(password, user.password)
         if (!isPasswordValid) {
             return res.status(401).json({ message: "Invalid credentials" })
@@ -364,6 +368,7 @@ exports.getAllRequisitions = async (req, res) => {
         return res.status(500).json({ msg: "Error retrieving requisitions", error: error.message });
     }
 }
+
 exports.getMyRequisitions = expressAsyncHandler(async (req, res) => {
     try {
         const userId = req.auth._id; 

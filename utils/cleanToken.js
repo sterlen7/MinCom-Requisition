@@ -9,7 +9,10 @@ const cleanUpBlacklistedTokens = async () => {
         const countBefore = await tokenBlacklist.countDocuments({ expiresAt: { $lt: now } });
         console.log(`Tokens eligible for deletion: ${countBefore}`);
         
-        const result = await tokenBlacklist.deleteMany({ expiresAt: { $lt: now } });
+        const result = await tokenBlacklist.deleteMany({ 
+            expiresAt: { $lt: now },
+            tokenType: { $in: ['refresh', 'access'] }
+        });
         console.log(`Expired blacklisted tokens deleted: ${result.deletedCount}`);
         
         if (result.deletedCount === 0) {
@@ -24,8 +27,9 @@ const cleanUpBlacklistedTokens = async () => {
 };
 
 const setTokenCleanUp = () => {
-    cron.schedule('0 * * * *', cleanUpBlacklistedTokens);
-    console.log('Token cleanup scheduled to run every hour');
+    cron.schedule('*/3 * * * *', cleanUpBlacklistedTokens);
+    console.log('Token cleanup scheduled to run every 3 minutes');
 };
 
 module.exports = setTokenCleanUp;
+
