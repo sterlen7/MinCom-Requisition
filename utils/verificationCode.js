@@ -15,15 +15,12 @@ exports.sendOtp = expressAsyncHandler(async (req, res) => {
     }
 
     try {
-        
-
         const user = await User.findById(userId);
         
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const email = user.email;
         const otpCode = generateCode();
         user.otpCode = otpCode;
         user.otpCodeExpires = Date.now() + 300000; 
@@ -41,14 +38,12 @@ exports.sendOtp = expressAsyncHandler(async (req, res) => {
 
         let mailOptions = {
             from: `"No Reply" <${process.env.USER_MAIL_ID}>`,
-            to: email,
+            to: user.email,
             subject: 'Minerals Commission Requisition Platform OTP Code',
             text: `Your OTP code is ${otpCode}. It will expire in 5 minutes. PLEASE DO NOT SHARE THIS WITH ANYBODY. Thank you`
         };
 
         await transporter.sendMail(mailOptions);
-
-        return res.status(200).json({ message: 'OTP code sent successfully' });
 
     } catch (error) {
         console.error(error);

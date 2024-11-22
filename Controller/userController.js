@@ -6,6 +6,7 @@ const Requisition = require ('../models/requisition')
 const expressAsyncHandler = require('express-async-handler')
 const Product = require('../models/productModel')
 const tokenBlacklist = require('../models/tokenBlacklistModel')
+const { sendOtp } = require('../utils/verificationCode')
 
 
 exports.createUser =expressAsyncHandler (async (req, res) => {
@@ -37,10 +38,14 @@ exports.createUser =expressAsyncHandler (async (req, res) => {
 
         await newUser.save();
 
-        res.status(201).json({ msg: 'User created successfully. Please verify your email to complete registration.', newUser})
+        await sendOtp({ params: { userId: newUser._id } }, res);
+
+        return res.status(201).json({ msg: 'User created successfully. Please verify your email to complete registration. OTP code sent successfully.', newUser})
     } catch (error) {
         console.error('Error creating user', error);
-        res.status(500).json({ msg: 'Server error' });
+        if (!res.headersSent) {
+            return res.status(500).json({ msg: 'Server error' });
+        }
     }
 })
 
