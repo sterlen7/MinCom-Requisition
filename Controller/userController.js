@@ -8,24 +8,23 @@ const Product = require('../models/productModel')
 const tokenBlacklist = require('../models/tokenBlacklistModel')
 const { sendOtp } = require('../utils/verificationCode')
 
-
-exports.createUser =expressAsyncHandler (async (req, res) => {
-    const { name, department, email, password,role } = req.body;
+exports.createUser = expressAsyncHandler(async (req, res) => {
+    const { name, department, email, password, role } = req.body;
 
     try {
-        const saltRounds = 10
-        const hashedPassword = await bcrypt.hash(password, saltRounds); 
-        
-    const usernameExists = await User.findOne({name})
-    const emailExists = await User.findOne({email})
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    if (usernameExists) {
-        return res.status(400).json({ msg: 'Username already exists' });
-    }
+        const usernameExists = await User.findOne({ name });
+        const emailExists = await User.findOne({ email });
 
-    if(emailExists){
-        return res.status(400).json({msg:"Email already exists"})
-    }
+        if (usernameExists) {
+            return res.status(400).json({ msg: 'Username already exists' });
+        }
+
+        if (emailExists) {
+            return res.status(400).json({ msg: 'Email already exists' });
+        }
 
         const newUser = new User({
             name,
@@ -33,45 +32,59 @@ exports.createUser =expressAsyncHandler (async (req, res) => {
             email,
             password: hashedPassword,
             role,
-            isVerified: false
+            isVerified: false,
         });
 
         await newUser.save();
 
-        await sendOtp({ params: { userId: newUser._id } }, res);
+        // Send OTP
+        await sendOtp(newUser._id.toString(), res);
 
-        return res.status(201).json({ msg: 'User created successfully. Please verify your email to complete registration. OTP code sent successfully.', newUser})
+        return res.status(201).json({
+            msg: 'User created successfully. Please verify your email to complete registration. OTP code sent successfully.',
+            newUser,
+        });
     } catch (error) {
         console.error('Error creating user', error);
         if (!res.headersSent) {
             return res.status(500).json({ msg: 'Server error' });
         }
     }
-})
+});
 
-exports.verifyAccount = expressAsyncHandler(async(req,res) => {
-    const{otpCode}= req.body
-    try{
+
+exports.verifyAccount = expressAsyncHandler(async (req, res) => {
+    const { otpCode } = req.body;
+
+    try {
         if (!otpCode) {
             return res.status(400).json({ msg: "Provide an OTP code" });
-          }
-      
-          const existingUser = await User.findOne({ otpCode })
-          if (existingUser.otpCodeExpires < Date.now()) {
-            return res.status(400).json({ message: 'OTP code has expired' });
-          }
+        }
 
-          existingUser.isVerified = true
-          existingUser.otpCode = undefined
-          existingUser.otpCodeExpires = undefined
-          
-          await existingUser.save()
-          res.status(200).json({msg:"Account verified successfully"})
+        const existingUser = await User.findOne({ otpCode });
+        if (!existingUser) {
+            return res.status(404).json({ message: 'User not found or incorrect OTP' });
+        }
 
-    }catch(error){
-        res.status(500).json({msg:"Internal Server Error", error})
+        
+        if (existingUser.otpCodeExpires < Date.now()) {
+            
+            await sendOtp(existingUser);
+            return res.status(400).json({ message: 'OTP expired. A new OTP has been sent to your email.' });
+        }
+
+        
+        existingUser.isVerified = true;
+        existingUser.otpCode = undefined;
+        existingUser.otpCodeExpires = undefined;
+        await existingUser.save();
+
+        res.status(200).json({ msg: "Account verified successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: "Internal Server Error", error });
     }
-})
+});
 
 exports.userLogin = async (req, res) => {
     const { email, password } = req.body;
