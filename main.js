@@ -8,7 +8,7 @@ const setTokenCleanUp = require('./utils/cleanToken')
 const cors = require('cors')    
 
 const corsOptions = {
-    origin:['https://mincom-requisition.onrender.com', 'http://localhost:5000'],
+    origin:['https://mincom-requisition.onrender.com', 'http://localhost:5000', 'http://localhost:5173'],
     optionsSuccessStatus: 200
 }
 
